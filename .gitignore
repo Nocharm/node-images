@@ -1,0 +1,2 @@
+# split archive parts (rejoin with: cat file.tar.gz.part-* > file.tar.gz)
+*.part-*
