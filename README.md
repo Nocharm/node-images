@@ -38,6 +38,8 @@ scp node22-alpine-amd64.tar.gz node22-slim-amd64.tar.gz <USER>@<SERVER_71>:/tmp/
 # 점프 호스트를 거쳐야 하면: scp -o ProxyJump=<USER>@<BASTION> ...
 ```
 
+> 통짜 파일 전송이 실패하거나 경유 구간에서 100MB 초과가 막히면 아래 **[분할 파일로 반입하는 경우](#분할-파일로-반입하는-경우)** 절차를 사용한다.
+
 ### 3. 71번 서버에 접속해서 docker load
 
 ```bash
@@ -60,8 +62,57 @@ docker images | grep node
 확인 후 임시 파일 정리:
 
 ```bash
-rm /tmp/node22-alpine-amd64.tar.gz /tmp/node22-bookworm-slim 2>/dev/null
 rm /tmp/node22-*.tar.gz
+```
+
+---
+
+## 분할 파일로 반입하는 경우
+
+통짜 `.tar.gz` 전송이 실패하거나 경유 구간에서 100MB 초과 파일이 막히면, 20MB 단위 분할 파일(`*.part-*`)을 사용한다.
+흐름은 **분할 파일 전송 → 71번 서버에서 재조립(cat) → docker load** 순이다.
+
+### 1. 분할 파일 전송
+
+```bash
+# alpine 분할: part-aa, ab, ac
+scp node22-alpine-amd64.tar.gz.part-* <USER>@<SERVER_71>:/tmp/
+# slim 분할: part-aa, ab, ac, ad
+scp node22-slim-amd64.tar.gz.part-*  <USER>@<SERVER_71>:/tmp/
+```
+
+### 2. 71번 서버에서 재조립 (건집)
+
+```bash
+ssh <USER>@<SERVER_71>
+cd /tmp
+
+# part-* 를 순서대로 이어붙여 원본 .tar.gz 복원
+cat node22-alpine-amd64.tar.gz.part-* > node22-alpine-amd64.tar.gz
+cat node22-slim-amd64.tar.gz.part-*  > node22-slim-amd64.tar.gz
+```
+
+> `cat ...part-*` 는 셸이 part-aa, part-ab ... 알파벳순으로 정렬해 합치므로 순서를 따로 신경 쓸 필요 없다.
+
+재조립이 깨지지 않았는지 확인 (gzip 무결성 검사):
+
+```bash
+gzip -t node22-alpine-amd64.tar.gz && echo "alpine OK"
+gzip -t node22-slim-amd64.tar.gz  && echo "slim OK"
+```
+
+### 3. docker load
+
+```bash
+docker load -i node22-alpine-amd64.tar.gz   # → node:22-alpine
+docker load -i node22-slim-amd64.tar.gz     # → node:22-bookworm-slim
+docker images | grep node
+```
+
+### 4. 정리
+
+```bash
+rm /tmp/node22-*.tar.gz /tmp/node22-*.tar.gz.part-*
 ```
 
 ---
