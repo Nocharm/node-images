@@ -21,7 +21,7 @@ Docker Hub이 막힌 환경의 **71번 서버**에 Node.js 베이스 이미지�
 
 ```bash
 # 최초 1회
-git clone <REPO_URL> node-images
+git clone https://github.com/Nocharm/node-images.git
 cd node-images
 
 # 이미 받아둔 경우 최신화
