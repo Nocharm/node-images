@@ -13,7 +13,16 @@ Docker Hub이 막힌 환경의 **71번 서버**에 Node.js 베이스 이미지�
 | `node22.23.4-alpine-amd64.tar.gz` | `node:22.23.4-alpine` | linux/amd64 |
 | `node22.23.4-slim-amd64.tar.gz` | `node:22.23.4-bookworm-slim` | linux/amd64 |
 
-> 각 파일은 GitHub 단일 파일 제한(100MB) 미만이라 분할 없이 통짜로 커밋한다.
+> node 이미지는 GitHub 단일 파일 제한(100MB) 미만이라 분할 없이 통짜로 커밋한다.
+
+### n8n 이미지
+
+| 파일 | 이미지 태그 | 아키텍처 | 내장 Node |
+| --- | --- | --- | --- |
+| `n8n-2.44.6-amd64.tar.gz.part-aa` ~ `part-af` | `n8nio/n8n:2.44.6` | linux/amd64 | v26.12.1 |
+
+> 압축해도 약 279MB라 50MB 단위로 분할했다. 원본 체크섬은 `n8n-2.44.6-amd64.tar.gz.sha256`.
+> n8n 공식 이미지는 Node를 **자체 내장**하므로 위 node 베이스 이미지와 무관하게 그대로 실행된다.
 
 Dockerfile에서는 반입한 태그를 그대로 쓴다:
 
@@ -82,6 +91,30 @@ docker run --rm node:22.23.4-alpine node -v   # v22.23.4
 ```bash
 rm /tmp/node24.22.1-*.tar.gz /tmp/node22.23.4-*.tar.gz
 ```
+
+---
+
+## n8n 이미지 반입 (분할 파일)
+
+```bash
+# 1. 로컬 PC → 71번 서버 전송
+scp n8n-2.44.6-amd64.tar.gz.part-* n8n-2.44.6-amd64.tar.gz.sha256 <USER>@<SERVER_71>:/tmp/
+
+# 2. 71번 서버에서 재조립 + 무결성 확인
+ssh <USER>@<SERVER_71>
+cd /tmp
+cat n8n-2.44.6-amd64.tar.gz.part-* > n8n-2.44.6-amd64.tar.gz
+sha256sum -c n8n-2.44.6-amd64.tar.gz.sha256      # → OK
+
+# 3. docker load
+docker load -i n8n-2.44.6-amd64.tar.gz           # → n8nio/n8n:2.44.6
+docker run --rm --entrypoint n8n n8nio/n8n:2.44.6 --version   # 2.44.6
+
+# 4. 정리
+rm /tmp/n8n-2.44.6-amd64.tar.gz*
+```
+
+기존 n8n 컨테이너는 compose 등에서 이미지 태그를 `n8nio/n8n:2.44.6` 으로 바꾼 뒤 재생성한다. **업그레이드 전 n8n 데이터 볼륨(`/home/node/.n8n`)과 DB는 반드시 백업**할 것.
 
 ---
 
