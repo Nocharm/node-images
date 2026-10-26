@@ -10,8 +10,8 @@ Docker Hub이 막힌 환경의 **71번 서버**에 Node.js 베이스 이미지�
 | --- | --- | --- |
 | `node24.22.1-alpine-amd64.tar.gz` | `node:24.22.1-alpine` | linux/amd64 |
 | `node24.22.1-slim-amd64.tar.gz` | `node:24.22.1-bookworm-slim` | linux/amd64 |
-| `node22-alpine-amd64.tar.gz` | `node:22-alpine` | linux/amd64 |
-| `node22-slim-amd64.tar.gz` | `node:22-bookworm-slim` | linux/amd64 |
+| `node22.23.4-alpine-amd64.tar.gz` | `node:22.23.4-alpine` | linux/amd64 |
+| `node22.23.4-slim-amd64.tar.gz` | `node:22.23.4-bookworm-slim` | linux/amd64 |
 
 > 각 파일은 GitHub 단일 파일 제한(100MB) 미만이라 분할 없이 통짜로 커밋한다.
 
@@ -21,6 +21,9 @@ Dockerfile에서는 반입한 태그를 그대로 쓴다:
 FROM node:24.22.1-alpine
 # 또는
 FROM node:24.22.1-bookworm-slim
+# node 22가 필요하면
+FROM node:22.23.4-alpine
+FROM node:22.23.4-bookworm-slim
 ```
 
 ---
@@ -42,7 +45,7 @@ git pull
 
 ```bash
 # <USER>, <SERVER_71> 은 환경에 맞게 변경
-scp node24.22.1-alpine-amd64.tar.gz node24.22.1-slim-amd64.tar.gz <USER>@<SERVER_71>:/tmp/
+scp node24.22.1-*.tar.gz node22.23.4-*.tar.gz <USER>@<SERVER_71>:/tmp/
 
 # 포트가 22가 아니면: scp -P <PORT> ...
 # 점프 호스트를 거쳐야 하면: scp -o ProxyJump=<USER>@<BASTION> ...
@@ -57,6 +60,8 @@ cd /tmp
 # docker load는 gzip 압축을 자동 해제하므로 .tar.gz를 그대로 넣으면 된다
 docker load -i node24.22.1-alpine-amd64.tar.gz   # → node:24.22.1-alpine
 docker load -i node24.22.1-slim-amd64.tar.gz     # → node:24.22.1-bookworm-slim
+docker load -i node22.23.4-alpine-amd64.tar.gz   # → node:22.23.4-alpine
+docker load -i node22.23.4-slim-amd64.tar.gz     # → node:22.23.4-bookworm-slim
 ```
 
 ### 4. 반입 확인
@@ -65,14 +70,17 @@ docker load -i node24.22.1-slim-amd64.tar.gz     # → node:24.22.1-bookworm-sli
 docker images | grep node
 # node   24.22.1-alpine          ...
 # node   24.22.1-bookworm-slim   ...
+# node   22.23.4-alpine          ...
+# node   22.23.4-bookworm-slim   ...
 
 docker run --rm node:24.22.1-alpine node -v   # v24.22.1
+docker run --rm node:22.23.4-alpine node -v   # v22.23.4
 ```
 
 확인 후 임시 파일 정리:
 
 ```bash
-rm /tmp/node24.22.1-*.tar.gz
+rm /tmp/node24.22.1-*.tar.gz /tmp/node22.23.4-*.tar.gz
 ```
 
 ---
